@@ -173,16 +173,35 @@ function TrustBadgesBar() {
 
 function CategoryCards() {
   const { t } = useLanguage()
+  const { data: content } = useQuery({
+    queryKey: ['category-cards-content'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('site_content')
+        .select('*')
+        .in('key', ['category_women_card', 'category_kids_card'])
+      return Object.fromEntries((data || []).map(r => [r.key, r]))
+    },
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const womenImg =
+    content?.category_women_card?.image_url ||
+    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1000'
+  const kidsImg =
+    content?.category_kids_card?.image_url ||
+    'https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=1000'
+
   return (
     <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
       <div className="text-center max-w-xl mx-auto mb-10 sm:mb-12">
         <span className="text-xs font-bold uppercase tracking-wider text-royal bg-royal/5 px-3 py-1 rounded-full font-arabic">
           {t('التشكيلات المختارة', 'Curated Collections')}
         </span>
-        <h2 className="text-2xl sm:text-4xl font-extrabold text-gray-900 mt-3 font-arabic">
+        <h2 className="text-2xl sm:text-4xl font-extrabold text-gray-900 dark:text-white mt-3 font-arabic">
           {t('تسوقي حسب الفئة', 'Shop by Category')}
         </h2>
-        <p className="text-gray-500 mt-2 font-arabic text-sm sm:text-base">
+        <p className="text-gray-500 dark:text-gray-400 mt-2 font-arabic text-sm sm:text-base">
           {t('تصاميم كوتور راقية مخصصة للسيدات وأميراتنا الصغيرات', 'Luxury couture designs crafted for women & young princesses')}
         </p>
       </div>
@@ -191,13 +210,16 @@ function CategoryCards() {
         {/* Women Card */}
         <Link
           to="/women"
-          className="group relative h-80 sm:h-[420px] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500"
+          className="group relative h-80 sm:h-[420px] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900"
         >
           <img
-            src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1000"
+            src={womenImg}
             alt="Women Couture"
             className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700"
             loading="lazy"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1000'
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0c1836]/90 via-[#0c1836]/30 to-transparent" />
           <div className="absolute top-5 right-5">
@@ -219,13 +241,16 @@ function CategoryCards() {
         {/* Kids Card */}
         <Link
           to="/kids"
-          className="group relative h-80 sm:h-[420px] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500"
+          className="group relative h-80 sm:h-[420px] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900"
         >
           <img
-            src="https://images.unsplash.com/photo-1518831959646-742c3a14ebf4?w=1000"
+            src={kidsImg}
             alt="Kids Couture"
             className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700"
             loading="lazy"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=1000'
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0c1836]/90 via-[#0c1836]/30 to-transparent" />
           <div className="absolute top-5 right-5">

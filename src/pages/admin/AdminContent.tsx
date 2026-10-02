@@ -21,6 +21,8 @@ const CONTENT_FIELDS: ContentField[] = [
   { key: 'hero_subtitle', labelAr: 'وصف البانر الرئيسي', type: 'text' },
   { key: 'hero_button_text', labelAr: 'نص زر البانر', type: 'text' },
   { key: 'hero_button_link', labelAr: 'رابط زر البانر', type: 'url' },
+  { key: 'category_women_card', labelAr: 'صورة وبطاقة تشكيلة النساء (الصفحة الرئيسية)', type: 'text', hasImage: true },
+  { key: 'category_kids_card', labelAr: 'صورة وبطاقة تشكيلة الأطفال (الصفحة الرئيسية)', type: 'text', hasImage: true },
   { key: 'about_content', labelAr: 'محتوى صفحة عن المتجر', type: 'textarea', hasImage: true, rows: 6 },
   { key: 'shipping_policy', labelAr: 'سياسة الشحن والإرجاع', type: 'textarea', rows: 5 },
   { key: 'size_guide', labelAr: 'دليل المقاسات (ملاحظات إضافية)', type: 'textarea', rows: 5 },
