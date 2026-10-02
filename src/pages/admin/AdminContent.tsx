@@ -130,30 +130,30 @@ export default function AdminContent() {
         </div>
 
         {CONTENT_FIELDS.map(({ key, labelAr, type, hasImage, rows }) => (
-          <div key={key} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div key={key} className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-slate-800 transition-colors">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900 font-arabic">{labelAr}</h3>
+              <h3 className="font-bold text-gray-950 dark:text-white font-arabic text-base">{labelAr}</h3>
               {localEdits[key] && (
-                <span className="w-2 h-2 bg-royal rounded-full" title="معدّل" />
+                <span className="w-2.5 h-2.5 bg-royal dark:bg-blue-400 rounded-full animate-pulse" title="معدّل" />
               )}
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Arabic */}
               <div>
-                <label className="text-xs text-gray-500 mb-1 block font-arabic">عربي</label>
+                <label className="text-xs font-bold text-gray-800 dark:text-slate-200 mb-1.5 block font-arabic">عربي</label>
                 {type === 'textarea' ? (
                   <textarea
                     rows={rows || 4}
                     value={getField(key, 'ar')}
                     onChange={e => setField(key, 'ar', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-arabic text-sm focus:outline-none focus:ring-2 focus:ring-royal/40 resize-none"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-950 dark:text-white rounded-xl font-arabic text-sm focus:outline-none focus:ring-2 focus:ring-royal/40 resize-none transition-colors"
                     dir="rtl"
                   />
                 ) : (
                   <input
                     value={getField(key, 'ar')}
                     onChange={e => setField(key, 'ar', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl font-arabic text-sm focus:outline-none focus:ring-2 focus:ring-royal/40"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-950 dark:text-white rounded-xl font-arabic text-sm focus:outline-none focus:ring-2 focus:ring-royal/40 transition-colors"
                     dir={type === 'url' ? 'ltr' : 'rtl'}
                   />
                 )}
@@ -161,20 +161,20 @@ export default function AdminContent() {
 
               {/* English */}
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">English</label>
+                <label className="text-xs font-bold text-gray-800 dark:text-slate-200 mb-1.5 block">English</label>
                 {type === 'textarea' ? (
                   <textarea
                     rows={rows || 4}
                     value={getField(key, 'en')}
                     onChange={e => setField(key, 'en', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal/40 resize-none"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-950 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal/40 resize-none transition-colors"
                     dir="ltr"
                   />
                 ) : (
                   <input
                     value={getField(key, 'en')}
                     onChange={e => setField(key, 'en', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal/40"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-950 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-royal/40 transition-colors"
                     dir="ltr"
                   />
                 )}
@@ -183,7 +183,7 @@ export default function AdminContent() {
               {/* Image Upload */}
               {hasImage && (
                 <div>
-                  <label className="text-xs text-gray-500 mb-2 block font-arabic">صورة</label>
+                  <label className="text-xs font-bold text-gray-800 dark:text-slate-200 mb-2 block font-arabic">صورة</label>
                   {getField(key, 'img') && (
                     <div className="relative mb-2 group">
                       <img
@@ -202,9 +202,9 @@ export default function AdminContent() {
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <label className="cursor-pointer flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                    <label className="cursor-pointer flex items-center gap-2 px-3.5 py-2 border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 rounded-xl text-sm text-gray-800 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                       <ImageIcon size={16} />
-                      <span className="font-arabic text-xs">{uploadingKey === key ? 'جاري الرفع...' : 'رفع صورة'}</span>
+                      <span className="font-arabic text-xs font-medium">{uploadingKey === key ? 'جاري الرفع...' : 'رفع صورة'}</span>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
@@ -216,9 +216,9 @@ export default function AdminContent() {
                     {getField(key, 'img') && (
                       <button
                         onClick={() => setField(key, 'img', '')}
-                        className="text-xs text-red-400 hover:text-red-600 font-arabic"
+                        className="text-xs text-red-500 hover:text-red-700 font-arabic font-medium"
                       >
-                        إزالة
+                        إزالة الصورة
                       </button>
                     )}
                   </div>

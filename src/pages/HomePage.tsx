@@ -150,17 +150,17 @@ function TrustBadgesBar() {
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 -mt-6 sm:-mt-8 relative z-20">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 bg-white rounded-3xl p-4 sm:p-6 shadow-xl border border-gray-100">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-xl border border-gray-200/80 dark:border-slate-800 transition-colors">
         {badges.map((b, i) => (
-          <div key={i} className="flex items-start gap-3 p-2.5 rounded-2xl hover:bg-gray-50/80 transition-colors">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-royal/5 border border-royal/10 flex items-center justify-center flex-shrink-0 text-royal">
+          <div key={i} className="flex items-start gap-3 p-2.5 rounded-2xl hover:bg-gray-50/80 dark:hover:bg-slate-800/80 transition-colors">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-royal/10 dark:bg-royal/30 border border-royal/20 flex items-center justify-center flex-shrink-0 text-royal dark:text-blue-400">
               <b.icon size={22} />
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 text-xs sm:text-sm font-arabic mb-0.5 leading-snug">
+              <h4 className="font-bold text-gray-950 dark:text-white text-xs sm:text-sm font-arabic mb-0.5 leading-snug">
                 {t(b.titleAr, b.titleEn)}
               </h4>
-              <p className="text-[11px] sm:text-xs text-gray-500 font-arabic leading-relaxed line-clamp-2">
+              <p className="text-[11px] sm:text-xs text-gray-700 dark:text-slate-300 font-arabic leading-relaxed line-clamp-2">
                 {t(b.descAr, b.descEn)}
               </p>
             </div>
@@ -195,13 +195,13 @@ function CategoryCards() {
   return (
     <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
       <div className="text-center max-w-xl mx-auto mb-10 sm:mb-12">
-        <span className="text-xs font-bold uppercase tracking-wider text-royal bg-royal/5 px-3 py-1 rounded-full font-arabic">
+        <span className="text-xs font-bold uppercase tracking-wider text-royal dark:text-blue-400 bg-royal/10 dark:bg-royal/30 px-3.5 py-1.5 rounded-full font-arabic">
           {t('التشكيلات المختارة', 'Curated Collections')}
         </span>
-        <h2 className="text-2xl sm:text-4xl font-extrabold text-gray-900 dark:text-white mt-3 font-arabic">
+        <h2 className="text-2xl sm:text-4xl font-extrabold text-gray-950 dark:text-white mt-3 font-arabic">
           {t('تسوقي حسب الفئة', 'Shop by Category')}
         </h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2 font-arabic text-sm sm:text-base">
+        <p className="text-gray-700 dark:text-slate-300 font-medium mt-2 font-arabic text-sm sm:text-base">
           {t('تصاميم كوتور راقية مخصصة للسيدات وأميراتنا الصغيرات', 'Luxury couture designs crafted for women & young princesses')}
         </p>
       </div>
@@ -291,22 +291,22 @@ function NewArrivals() {
   })
 
   return (
-    <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto bg-gradient-to-b from-gray-50/80 to-white rounded-3xl border border-gray-100/60 my-6">
+    <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto bg-gradient-to-b from-gray-50/90 to-white dark:from-slate-900 dark:to-slate-950 rounded-3xl border border-gray-200/80 dark:border-slate-800 my-6 transition-colors">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
         <div>
-          <span className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full font-arabic">
+          <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950/60 px-3.5 py-1.5 rounded-full font-arabic">
             ✨ {t('أحدث الإضافات', 'Just Arrived')}
           </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 font-arabic">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white mt-3 font-arabic">
             {t('وصل حديثاً إلى الأتيليه', 'New Atelier Arrivals')}
           </h2>
-          <p className="text-gray-500 mt-1 font-arabic text-sm">
+          <p className="text-gray-700 dark:text-slate-300 font-medium mt-1.5 font-arabic text-sm sm:text-base">
             {t('أحدث صيحات الموضة والتفصيل اليدوي لهذا الموسم', 'The newest fashion trends and couture for this season')}
           </p>
         </div>
         <Link
           to="/women"
-          className="inline-flex items-center gap-1.5 text-royal font-bold hover:underline font-arabic text-sm"
+          className="inline-flex items-center gap-1.5 text-royal dark:text-blue-400 font-bold hover:underline font-arabic text-sm"
         >
           <span>{t('عرض جميع المنتجات', 'View All Products')}</span>
           {isRTL ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
@@ -441,19 +441,19 @@ function FeaturedProducts() {
     <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
         <div>
-          <span className="text-xs font-bold text-royal bg-royal/5 px-3 py-1 rounded-full font-arabic">
+          <span className="text-xs font-bold text-royal dark:text-blue-400 bg-royal/10 dark:bg-royal/30 px-3.5 py-1.5 rounded-full font-arabic">
             💎 {t('الأكثر طلباً', 'Best Sellers')}
           </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 font-arabic">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white mt-3 font-arabic">
             {t('المنتجات الأكثر تميزاً وإقبالاً', 'Featured Signature Pieces')}
           </h2>
-          <p className="text-gray-500 mt-1 font-arabic text-sm">
+          <p className="text-gray-700 dark:text-slate-300 font-medium mt-1.5 font-arabic text-sm sm:text-base">
             {t('اختيارات عميلاتنا المفضلة لمناسبات الخطوبة، الأفراح والسهرات', 'Customer favorites for engagements, weddings and galas')}
           </p>
         </div>
         <Link
           to="/women"
-          className="inline-flex items-center gap-1.5 text-royal font-bold hover:underline font-arabic text-sm"
+          className="inline-flex items-center gap-1.5 text-royal dark:text-blue-400 font-bold hover:underline font-arabic text-sm"
         >
           <span>{t('عرض كل التشكيلة', 'View Entire Collection')}</span>
           {isRTL ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
@@ -503,15 +503,15 @@ function TestimonialsSection() {
   ]
 
   return (
-    <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto bg-gray-50/70 rounded-3xl border border-gray-100 my-8">
+    <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto bg-gray-50/90 dark:bg-slate-900/60 rounded-3xl border border-gray-200/80 dark:border-slate-800 my-8 transition-colors">
       <div className="text-center max-w-xl mx-auto mb-12">
-        <span className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full font-arabic">
+        <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950/60 px-3.5 py-1.5 rounded-full font-arabic">
           ⭐ {t('تجارب حقيقية', 'Verified Experiences')}
         </span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 font-arabic">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white mt-3 font-arabic">
           {t('آراء عميلاتنا المتميزات', 'Customer Testimonials')}
         </h2>
-        <p className="text-gray-500 mt-1 font-arabic text-sm">
+        <p className="text-gray-700 dark:text-slate-300 font-medium mt-1.5 font-arabic text-sm sm:text-base">
           {t('ثقة عميلاتنا هي فخرنا وأساس تميزنا في عالم الأزياء', 'Our clients trust is our proudest achievement')}
         </p>
       </div>
@@ -520,7 +520,7 @@ function TestimonialsSection() {
         {reviews.map((r, i) => (
           <div
             key={i}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col justify-between"
+            className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-200/80 dark:border-slate-800 hover:shadow-md transition-all flex flex-col justify-between"
           >
             <div>
               {/* Stars */}
@@ -529,17 +529,17 @@ function TestimonialsSection() {
                   <Star key={idx} size={16} fill="currentColor" />
                 ))}
               </div>
-              <p className="text-gray-700 text-sm leading-relaxed font-arabic mb-4 italic">
+              <p className="text-gray-800 dark:text-slate-200 text-sm leading-relaxed font-arabic mb-4 italic">
                 "{r.comment}"
               </p>
             </div>
 
-            <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+            <div className="pt-4 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h4 className="font-bold text-gray-900 text-sm font-arabic">{r.name}</h4>
-                <p className="text-xs text-gray-400 font-arabic">{r.city}</p>
+                <h4 className="font-bold text-gray-950 dark:text-white text-sm font-arabic">{r.name}</h4>
+                <p className="text-xs text-gray-500 dark:text-slate-400 font-arabic">{r.city}</p>
               </div>
-              <span className="text-[11px] text-royal font-bold bg-royal/5 px-2.5 py-1 rounded-lg font-arabic">
+              <span className="text-[11px] text-royal dark:text-blue-400 font-bold bg-royal/10 dark:bg-royal/30 px-2.5 py-1 rounded-lg font-arabic">
                 {r.product}
               </span>
             </div>
@@ -625,10 +625,10 @@ function WhyUsSection() {
   return (
     <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
       <div className="text-center max-w-xl mx-auto mb-12">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 font-arabic">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white font-arabic">
           {t('لماذا تختارين R&A Couture؟', 'Why Choose R&A Couture?')}
         </h2>
-        <p className="text-gray-500 mt-2 font-arabic text-sm">
+        <p className="text-gray-700 dark:text-slate-300 font-medium mt-2 font-arabic text-sm sm:text-base">
           {t('تجربة تسوق فاخرة تضمن لكِ أعلى معايير الجودة والأمان', 'A luxury shopping experience ensuring highest standards')}
         </p>
       </div>
@@ -637,13 +637,13 @@ function WhyUsSection() {
         {features.map((f, i) => (
           <div
             key={i}
-            className="text-center p-6 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+            className="text-center p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
           >
-            <div className="w-14 h-14 bg-royal/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-royal">
+            <div className="w-14 h-14 bg-royal/10 dark:bg-royal/30 rounded-2xl flex items-center justify-center mx-auto mb-4 text-royal dark:text-blue-400">
               <f.icon size={28} />
             </div>
-            <h3 className="font-bold text-gray-900 mb-2 font-arabic text-base">{t(f.titleAr, f.titleEn)}</h3>
-            <p className="text-gray-500 text-xs sm:text-sm font-arabic leading-relaxed">{t(f.descAr, f.descEn)}</p>
+            <h3 className="font-bold text-gray-950 dark:text-white mb-2 font-arabic text-base">{t(f.titleAr, f.titleEn)}</h3>
+            <p className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-arabic leading-relaxed">{t(f.descAr, f.descEn)}</p>
           </div>
         ))}
       </div>
