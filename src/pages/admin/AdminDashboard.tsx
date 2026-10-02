@@ -228,10 +228,10 @@ export default function AdminDashboard() {
   })
 
   const statusColors: Record<string, 'info' | 'warning' | 'success' | 'danger'> = {
-    new: 'info', confirmed: 'warning', shipped: 'success', cancelled: 'danger'
+    new: 'info', confirmed: 'warning', shipped: 'success', delivered: 'success', cancelled: 'danger'
   }
   const statusLabels: Record<string, string> = {
-    new: 'جديد', confirmed: 'مؤكد', shipped: 'مشحون', cancelled: 'ملغي'
+    new: 'جديد', confirmed: 'مؤكد', shipped: 'مشحون', delivered: 'تم الاستلام ✓', cancelled: 'ملغي'
   }
 
   return (

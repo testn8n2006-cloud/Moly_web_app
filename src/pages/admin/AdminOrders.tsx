@@ -15,7 +15,7 @@ import type { Order, OrderWithItems } from '@/lib/types'
 import { getProductSku, formatProductSku } from '@/lib/sku'
 import toast from 'react-hot-toast'
 
-type OrderStatus = 'new' | 'confirmed' | 'shipped' | 'cancelled'
+type OrderStatus = 'new' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
 
 interface StatusConfig {
   value: OrderStatus
@@ -80,6 +80,23 @@ const STATUS_CONFIG: Record<OrderStatus, StatusConfig> = {
     border: 'border-emerald-200',
     dot: 'bg-emerald-500',
     icon: Truck,
+    nextAction: {
+      nextStatus: 'delivered',
+      label: 'تم الاستلام ✨',
+      icon: PackageCheck,
+      btnClass: 'bg-teal-600 hover:bg-teal-700 text-white',
+    },
+  },
+  delivered: {
+    value: 'delivered',
+    label: 'تم استلام العميل للطلب بنجاح',
+    shortLabel: 'مستلم ✓',
+    desc: 'استلم العميل الفستان وتأكد منه وتم تحصيل المبلغ بنجاح',
+    bg: 'bg-teal-50 hover:bg-teal-100/80',
+    text: 'text-teal-800',
+    border: 'border-teal-200',
+    dot: 'bg-teal-500',
+    icon: PackageCheck,
   },
   cancelled: {
     value: 'cancelled',
@@ -224,6 +241,7 @@ export default function AdminOrders() {
     new: allOrders?.filter(o => o.status === 'new').length || 0,
     confirmed: allOrders?.filter(o => o.status === 'confirmed').length || 0,
     shipped: allOrders?.filter(o => o.status === 'shipped').length || 0,
+    delivered: allOrders?.filter(o => o.status === 'delivered').length || 0,
     cancelled: allOrders?.filter(o => o.status === 'cancelled').length || 0,
   }
 
@@ -280,6 +298,11 @@ export default function AdminOrders() {
             `نبشرك بأن طلبك رقم *${order.order_number}* من *R&A Couture* قد تم شحنه وهو في الطريق إليكِ الآن إلى ${order.city}.\n\n` +
             `💵 المبلغ المطلوب للدفع عند الاستلام: *${formatPrice(order.total)}*.\n` +
             `نتمنى أن ينال إعجابك وتتألقي به دائماً! ✨`
+    } else if (status === 'delivered') {
+      msg = `أهلاً بحضرتك أستاذة *${order.customer_name}* 💖✨\n` +
+            `تم تأكيد استلام طلبك رقم *${order.order_number}* من *R&A Couture* بنجاح!\n` +
+            `سعداء جداً بخدمتك ونتمنى أن ينال الفستان إعجابك وتتألقي به في أجمل مناسباتك.\n\n` +
+            `نسعد بمشاركة رأيك وصورتكِ لتجربتك معنا 👗🌸`
     } else if (status === 'cancelled') {
       msg = `أهلاً بحضرتك أستاذة *${order.customer_name}* 🌸\n` +
             `بخصوص طلبك رقم *${order.order_number}*، نود إعلامك بأنه تم إلغاء الطلب بناءً على رغبتك.\n` +
@@ -501,6 +524,21 @@ export default function AdminOrders() {
             <span>تم الشحن</span>
             <span className={`px-2 py-0.5 rounded-full text-xs ${statusFilter === 'shipped' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
               {counts.shipped}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setStatusFilter('delivered')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold font-arabic transition-all whitespace-nowrap flex items-center gap-2 ${
+              statusFilter === 'delivered'
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'bg-white text-teal-800 hover:bg-teal-50 border border-teal-200'
+            }`}
+          >
+            <PackageCheck size={15} />
+            <span>تم الاستلام ✓</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs ${statusFilter === 'delivered' ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-800'}`}>
+              {counts.delivered}
             </span>
           </button>
 

@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS orders (
   shipping_fee NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (shipping_fee >= 0),
   total NUMERIC(10,2) NOT NULL CHECK (total >= 0),
   coupon_code TEXT CHECK (length(coupon_code) <= 50),
-  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'confirmed', 'shipped', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'confirmed', 'shipped', 'delivered', 'cancelled')),
   admin_notes TEXT CHECK (length(admin_notes) <= 2000),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

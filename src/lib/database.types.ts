@@ -153,7 +153,7 @@ export interface Database {
           shipping_fee: number
           total: number
           coupon_code: string | null
-          status: 'new' | 'confirmed' | 'shipped' | 'cancelled'
+          status: 'new' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
           admin_notes: string | null
           device_id: string | null
           device_type: string | null
@@ -175,7 +175,7 @@ export interface Database {
           shipping_fee?: number
           total: number
           coupon_code?: string | null
-          status?: 'new' | 'confirmed' | 'shipped' | 'cancelled'
+          status?: 'new' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
           admin_notes?: string | null
           device_id?: string | null
           device_type?: string | null
