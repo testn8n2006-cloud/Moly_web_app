@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply font-arabic text-gray-900 bg-white antialiased transition-colors duration-200;
+  }
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer utilities {
+  .font-arabic {
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+  }
+  .font-english {
+    font-family: 'Poppins', 'Playfair Display', sans-serif;
+  }
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Royal Blue */
+:root {
+  --color-royal: #1E3A8A;
+  --color-royal-light: #2563EB;
+  --color-royal-dark: #1E40AF;
+}
+
+/* RTL support for number inputs */
+input[type='number'] {
+  direction: ltr;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E3A8A;
+  border-radius: 3px;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+}
