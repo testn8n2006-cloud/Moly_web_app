@@ -48,18 +48,41 @@ export default function AdminProducts() {
   const [selected, setSelected] = useState<string[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['admin-products', search],
+  const { data: allProducts, isLoading } = useQuery({
+    queryKey: ['admin-products'],
     queryFn: async () => {
-      let q = supabase.from('products').select('*').order('created_at', { ascending: false })
-      if (search) {
-        const clean = search.trim().replace(/^#/, '')
-        q = q.or(`name_ar.ilike.%${clean}%,name_en.ilike.%${clean}%,sku.ilike.%${clean}%`)
-      }
-      const { data, error } = await q
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false })
       if (error) throw error
-      return data as Product[]
+      return (data || []) as Product[]
     },
+    staleTime: 1000 * 30,
+  })
+
+  // Comprehensive instant search (by SKU code, Name in Ar/En, Price, ID)
+  const filteredProducts = (allProducts || []).filter(product => {
+    if (!search.trim()) return true
+    const term = search.trim().toLowerCase().replace(/^#/, '')
+    const computedSku = getProductSku(product).toLowerCase()
+    const formattedSku = formatProductSku(computedSku).toLowerCase().replace(/^#/, '')
+    const explicitSku = ((product as any).sku || '').toLowerCase().replace(/^#/, '')
+    const nameAr = (product.name_ar || '').toLowerCase()
+    const nameEn = (product.name_en || '').toLowerCase()
+    const price = String(product.price || '')
+    const salePrice = String(product.sale_price || '')
+
+    return (
+      computedSku.includes(term) ||
+      formattedSku.includes(term) ||
+      explicitSku.includes(term) ||
+      nameAr.includes(term) ||
+      nameEn.includes(term) ||
+      price.includes(term) ||
+      salePrice.includes(term) ||
+      product.id.toLowerCase().includes(term)
+    )
   })
 
   const { data: categories } = useQuery({
@@ -288,8 +311,8 @@ export default function AdminProducts() {
                   <th className="w-10 px-4 py-3">
                     <input
                       type="checkbox"
-                      onChange={e => setSelected(e.target.checked ? (products?.map(p => p.id) || []) : [])}
-                      checked={selected.length === products?.length && products?.length > 0}
+                      onChange={e => setSelected(e.target.checked ? filteredProducts.map(p => p.id) : [])}
+                      checked={selected.length === filteredProducts.length && filteredProducts.length > 0}
                       className="rounded"
                     />
                   </th>
@@ -311,7 +334,7 @@ export default function AdminProducts() {
                     </tr>
                   ))
                 )}
-                {products?.map(product => {
+                {filteredProducts.map(product => {
                   const skuCode = getProductSku(product)
                   return (
                   <tr key={product.id} className="hover:bg-gray-50">
@@ -381,8 +404,10 @@ export default function AdminProducts() {
               </tbody>
             </table>
           </div>
-          {products?.length === 0 && !isLoading && (
-            <div className="text-center py-12 text-gray-400 font-arabic">لا توجد منتجات</div>
+          {filteredProducts.length === 0 && !isLoading && (
+            <div className="text-center py-12 text-gray-400 font-arabic">
+              {search ? 'لا توجد منتجات تطابق البحث' : 'لا توجد منتجات'}
+            </div>
           )}
         </div>
 
