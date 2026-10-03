@@ -5,14 +5,14 @@ import {
   Sparkles, CheckCircle2, Truck, XCircle, Printer,
   MapPin, PackageCheck, AlertCircle, ArrowUpRight,
   Copy, Star, Smartphone, Monitor, Tablet,
-  Trash2, Archive, ArchiveRestore
+  Trash2, Archive, ArchiveRestore, FileSpreadsheet, Zap
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { formatPrice, formatDate } from '@/lib/utils'
-import type { Order, OrderWithItems } from '@/lib/types'
+import { formatPrice, formatDate, cn } from '@/lib/utils'
+import type { Order, OrderWithItems, OrderItem } from '@/lib/types'
 import { getProductSku, formatProductSku } from '@/lib/sku'
 import toast from 'react-hot-toast'
 
@@ -210,6 +210,19 @@ export default function AdminOrders() {
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [archivingId, setArchivingId] = useState<string | null>(null)
+
+  // Multi-selection states
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
+  const [bulkUpdating, setBulkUpdating] = useState(false)
+
+  // Courier Export Modal states
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportCourier, setExportCourier] = useState<'bosta' | 'mylerz' | 'universal'>('bosta')
+  const [exportScope, setExportScope] = useState<'confirmed' | 'filtered' | 'selected' | 'all'>('confirmed')
+  const [autoMarkAsShipped, setAutoMarkAsShipped] = useState(true)
+  const [includeItemDetails, setIncludeItemDetails] = useState(true)
+  const [allowOpenPackage, setAllowOpenPackage] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Query all orders
   const { data: allOrders, isLoading } = useQuery({
@@ -524,27 +537,249 @@ export default function AdminOrders() {
     printWindow.document.close()
   }
 
-  function exportCSV() {
-    if (!filteredOrders.length) return
-    const rows = [
-      ['رقم الطلب', 'العميل', 'الهاتف', 'المدينة', 'العنوان', 'الإجمالي', 'الحالة', 'التاريخ'],
-      ...filteredOrders.map(o => [
-        o.order_number,
-        o.customer_name,
-        o.phone,
-        o.city,
-        `"${o.address.replace(/"/g, '""')}"`,
-        o.total,
-        STATUS_CONFIG[o.status]?.label || o.status,
-        o.created_at,
-      ]),
-    ]
-    const csv = rows.map(r => r.join(',')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `orders-ra-couture-${new Date().toISOString().slice(0, 10)}.csv`
-    link.click()
+  // Selection helper functions
+  function toggleSelectOrder(orderId: string) {
+    setSelectedOrderIds(prev =>
+      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+    )
+  }
+
+  const allFilteredSelected = filteredOrders.length > 0 && filteredOrders.every(o => selectedOrderIds.includes(o.id))
+
+  function toggleSelectAllFiltered() {
+    if (allFilteredSelected) {
+      const filteredIds = new Set(filteredOrders.map(o => o.id))
+      setSelectedOrderIds(prev => prev.filter(id => !filteredIds.has(id)))
+    } else {
+      const newIds = new Set([...selectedOrderIds, ...filteredOrders.map(o => o.id)])
+      setSelectedOrderIds(Array.from(newIds))
+    }
+  }
+
+  function clearSelection() {
+    setSelectedOrderIds([])
+  }
+
+  async function bulkUpdateStatus(newStatus: OrderStatus) {
+    if (selectedOrderIds.length === 0) return
+    const cfg = STATUS_CONFIG[newStatus]
+    setBulkUpdating(true)
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .in('id', selectedOrderIds)
+
+      if (error) throw error
+      toast.success(`تم تحديث ${selectedOrderIds.length} طلبات إلى "${cfg.label}" بنجاح`)
+      qc.invalidateQueries({ queryKey: ['admin-orders-list'] })
+      setSelectedOrderIds([])
+    } catch (err: any) {
+      toast.error('حدث خطأ أثناء التحديث الجماعي: ' + err.message)
+    } finally {
+      setBulkUpdating(false)
+    }
+  }
+
+  // Get Target Orders for Shipping Export
+  function getTargetOrdersForExport(): Order[] {
+    if (exportScope === 'selected' && selectedOrderIds.length > 0) {
+      return (allOrders || []).filter(o => selectedOrderIds.includes(o.id))
+    }
+    if (exportScope === 'confirmed') {
+      return (allOrders || []).filter(o => o.status === 'confirmed' && !isOrderArchived(o))
+    }
+    if (exportScope === 'all') {
+      return (allOrders || []).filter(o => !isOrderArchived(o))
+    }
+    return filteredOrders
+  }
+
+  // Courier Shipping Manifest Export (Bosta / Mylerz / Universal CSV/Excel with UTF-8 BOM)
+  async function performCourierExport() {
+    const targetOrders = getTargetOrdersForExport()
+    if (targetOrders.length === 0) {
+      toast.error('لا توجد طلبات لتصديرها ضمن هذا النطاق')
+      return
+    }
+
+    setIsExporting(true)
+    try {
+      const targetOrderIds = targetOrders.map(o => o.id)
+      const itemsByOrderId: Record<string, OrderItem[]> = {}
+
+      if (includeItemDetails) {
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*')
+          .in('order_id', targetOrderIds)
+
+        if (!itemsError && itemsData) {
+          ;(itemsData as OrderItem[]).forEach(item => {
+            if (!itemsByOrderId[item.order_id]) itemsByOrderId[item.order_id] = []
+            itemsByOrderId[item.order_id].push(item)
+          })
+        }
+      }
+
+      function formatOrderItems(orderId: string): string {
+        const items = itemsByOrderId[orderId] || []
+        if (!items.length) return 'أزياء راقية R&A Couture'
+        return items.map(i => {
+          let text = i.product_name || 'فستان'
+          const parts = []
+          if (i.size) parts.push(`مقاس: ${i.size}`)
+          if (i.color) parts.push(`لون: ${i.color}`)
+          if (parts.length > 0) text += ` [${parts.join(' - ')}]`
+          text += ` × ${i.quantity || 1}`
+          return text
+        }).join(' + ')
+      }
+
+      function formatItemsCount(orderId: string): number {
+        const items = itemsByOrderId[orderId] || []
+        if (!items.length) return 1
+        return items.reduce((sum, i) => sum + (i.quantity || 1), 0)
+      }
+
+      const todayStr = new Date().toISOString().slice(0, 10)
+      let csvContent = ''
+      let filename = ''
+
+      if (exportCourier === 'bosta') {
+        // Bosta official bulk template format
+        filename = `bosta-manifest-${todayStr}.csv`
+        const headers = [
+          'Business Reference',
+          'Receiver Name',
+          'Phone Number',
+          'Secondary Phone',
+          'City',
+          'Address',
+          'COD Amount',
+          'Package Description',
+          'Notes',
+          'Allow Open'
+        ]
+
+        const rows = targetOrders.map(o => [
+          `"${o.order_number}"`,
+          `"${(o.customer_name || '').replace(/"/g, '""')}"`,
+          `"${(o.phone || '').replace(/"/g, '""')}"`,
+          '""',
+          `"${(o.city || 'القاهرة').replace(/"/g, '""')}"`,
+          `"${(o.address || '').replace(/"/g, '""')}"`,
+          o.total || 0,
+          `"${formatOrderItems(o.id).replace(/"/g, '""')}"`,
+          `"${(o.notes || 'برجاء الاتصال قبل التوصيل').replace(/"/g, '""')}"`,
+          allowOpenPackage ? '"Yes"' : '"No"'
+        ])
+
+        csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
+      } else if (exportCourier === 'mylerz') {
+        // Mylerz official bulk template format
+        filename = `mylerz-orders-${todayStr}.csv`
+        const headers = [
+          'Customer Reference',
+          'Customer Name',
+          'Mobile No',
+          'City',
+          'Address',
+          'COD Amount',
+          'Package Content',
+          'Pieces Count',
+          'Special Instructions',
+          'Allow Open'
+        ]
+
+        const rows = targetOrders.map(o => [
+          `"${o.order_number}"`,
+          `"${(o.customer_name || '').replace(/"/g, '""')}"`,
+          `"${(o.phone || '').replace(/"/g, '""')}"`,
+          `"${(o.city || 'القاهرة').replace(/"/g, '""')}"`,
+          `"${(o.address || '').replace(/"/g, '""')}"`,
+          o.total || 0,
+          `"${formatOrderItems(o.id).replace(/"/g, '""')}"`,
+          formatItemsCount(o.id),
+          `"${(o.notes || 'تسليم باليد - R&A Couture').replace(/"/g, '""')}"`,
+          allowOpenPackage ? '"Yes"' : '"No"'
+        ])
+
+        csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
+      } else {
+        // Universal Detailed Manifest
+        filename = `shipping-manifest-ra-couture-${todayStr}.csv`
+        const headers = [
+          'م',
+          'رقم الطلب',
+          'تاريخ الطلب',
+          'اسم العميل',
+          'رقم الهاتف',
+          'المحافظة',
+          'العنوان بالتفصيل',
+          'محتويات الشحنة والمقاسات والأكواد',
+          'عدد القطع',
+          'مبلغ التحصيل عند الاستلام (ج.م)',
+          'رسوم الشحن (ج.م)',
+          'حالة الطلب الحالية',
+          'ملاحظات العميل والتوصيل',
+          'حق المعاينة قبل الاستلام'
+        ]
+
+        const rows = targetOrders.map((o, idx) => [
+          idx + 1,
+          `"${o.order_number}"`,
+          `"${new Date(o.created_at).toLocaleDateString('ar-EG')}"`,
+          `"${(o.customer_name || '').replace(/"/g, '""')}"`,
+          `"${(o.phone || '').replace(/"/g, '""')}"`,
+          `"${(o.city || '').replace(/"/g, '""')}"`,
+          `"${(o.address || '').replace(/"/g, '""')}"`,
+          `"${formatOrderItems(o.id).replace(/"/g, '""')}"`,
+          formatItemsCount(o.id),
+          o.total || 0,
+          o.shipping_fee || 0,
+          `"${STATUS_CONFIG[o.status]?.label || o.status}"`,
+          `"${(o.notes || '').replace(/"/g, '""')}"`,
+          allowOpenPackage ? '"مسموح بالمعاينة"' : '"غير مسموح"'
+        ])
+
+        csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
+      }
+
+      // Download file with UTF-8 BOM
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = filename
+      link.click()
+
+      // Automatically update orders to 'shipped' if option selected
+      if (autoMarkAsShipped) {
+        const toUpdate = targetOrders.filter(o => o.status !== 'shipped' && o.status !== 'delivered' && o.status !== 'cancelled')
+        if (toUpdate.length > 0) {
+          const updateIds = toUpdate.map(o => o.id)
+          await supabase
+            .from('orders')
+            .update({ status: 'shipped' })
+            .in('id', updateIds)
+
+          qc.invalidateQueries({ queryKey: ['admin-orders-list'] })
+          toast.success(`تم تنزيل الشيت وتحديث ${toUpdate.length} طلب إلى "تم الشحن 🚚"`)
+        } else {
+          toast.success(`تم تنزيل كشف الشحن بنجاح (${targetOrders.length} طلب)`)
+        }
+      } else {
+        toast.success(`تم تنزيل كشف الشحن بنجاح (${targetOrders.length} طلب)`)
+      }
+
+      setShowExportModal(false)
+      setSelectedOrderIds([])
+    } catch (err: any) {
+      console.error('Export error:', err)
+      toast.error('حدث خطأ أثناء تصدير الشيت: ' + (err.message || ''))
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
@@ -557,9 +792,21 @@ export default function AdminOrders() {
             <p className="text-gray-500 text-sm font-arabic">تتبع ومتابعة مراحل شحن وتوصيل طلبات العملاء</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={exportCSV} className="gap-2 font-arabic">
-              <Download size={15} />
-              تصدير إكسل / CSV
+            <Button
+              onClick={() => {
+                setExportScope(selectedOrderIds.length > 0 ? 'selected' : (counts.confirmed > 0 ? 'confirmed' : 'filtered'))
+                setShowExportModal(true)
+              }}
+              className="gap-2 font-arabic bg-royal hover:bg-royal-dark text-white shadow-md hover:shadow-lg transition-all"
+              size="sm"
+            >
+              <FileSpreadsheet size={16} />
+              <span>تصدير لشركات الشحن (بوسطة / Excel)</span>
+              {counts.confirmed > 0 && (
+                <span className="bg-amber-400 text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full mr-1">
+                  {counts.confirmed} جاهز للشحن 🚚
+                </span>
+              )}
             </Button>
           </div>
         </div>
@@ -689,6 +936,15 @@ export default function AdminOrders() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
+                  <th className="px-3 py-3.5 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={toggleSelectAllFiltered}
+                      className="w-4 h-4 rounded text-royal focus:ring-royal/30 cursor-pointer accent-royal"
+                      title="تحديد كل الطلبات في هذه الصفحة"
+                    />
+                  </th>
                   <th className="text-right px-4 py-3.5 font-arabic text-gray-600 font-semibold">رقم الطلب</th>
                   <th className="text-right px-4 py-3.5 font-arabic text-gray-600 font-semibold">العميل</th>
                   <th className="text-right px-4 py-3.5 font-arabic text-gray-600 font-semibold">المحافظة / المدينة</th>
@@ -703,9 +959,26 @@ export default function AdminOrders() {
                 {filteredOrders.map(order => {
                   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.new
                   const nextAction = cfg.nextAction
+                  const isSelected = selectedOrderIds.includes(order.id)
 
                   return (
-                    <tr key={order.id} className="hover:bg-gray-50/70 transition-colors">
+                    <tr
+                      key={order.id}
+                      className={cn(
+                        "hover:bg-gray-50/70 transition-colors",
+                        isSelected && "bg-royal/5"
+                      )}
+                    >
+                      {/* Row Checkbox */}
+                      <td className="px-3 py-3.5 text-center" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectOrder(order.id)}
+                          className="w-4 h-4 rounded text-royal focus:ring-royal/30 cursor-pointer accent-royal"
+                        />
+                      </td>
+
                       {/* Order Number */}
                       <td className="px-4 py-3.5">
                         <button
@@ -1204,6 +1477,342 @@ export default function AdminOrders() {
               </div>
             </div>
           )}
+        </Modal>
+
+        {/* Sticky Bulk Action Bar */}
+        {selectedOrderIds.length > 0 && (
+          <div className="fixed bottom-6 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-40 bg-slate-900/95 text-white backdrop-blur-md px-5 py-3.5 rounded-2xl shadow-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4 max-w-2xl w-full animate-slide-up">
+            <div className="flex items-center gap-3">
+              <span className="w-7 h-7 bg-royal rounded-lg flex items-center justify-center text-xs font-bold font-english">
+                {selectedOrderIds.length}
+              </span>
+              <span className="text-sm font-arabic font-medium">طلب محدد</span>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => {
+                  setExportScope('selected')
+                  setShowExportModal(true)
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold font-arabic px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <Truck size={14} />
+                <span>تصدير للشحن</span>
+              </button>
+
+              <button
+                onClick={() => bulkUpdateStatus('shipped')}
+                disabled={bulkUpdating}
+                className="bg-royal-light hover:bg-royal text-white text-xs font-bold font-arabic px-3 py-2 rounded-xl flex items-center gap-1 transition-colors"
+                title="تحديث المحدد إلى تم الشحن"
+              >
+                <PackageCheck size={14} />
+                <span>تم الشحن</span>
+              </button>
+
+              <button
+                onClick={() => bulkUpdateStatus('confirmed')}
+                disabled={bulkUpdating}
+                className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold font-arabic px-3 py-2 rounded-xl flex items-center gap-1 transition-colors"
+                title="تحديث المحدد إلى مؤكد"
+              >
+                <Check size={14} />
+                <span>تأكيد</span>
+              </button>
+
+              <button
+                onClick={clearSelection}
+                className="text-gray-400 hover:text-white text-xs font-arabic px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                إلغاء التحديد
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Courier Shipping Export Modal */}
+        <Modal
+          open={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          title="تصدير كشف الشحن (بوسطة / مايلرز / إكسل) 🚚"
+          size="lg"
+        >
+          {(() => {
+            const previewOrders = getTargetOrdersForExport()
+            const totalCOD = previewOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0)
+
+            return (
+              <div className="space-y-6 text-right font-arabic">
+                {/* Step 1: Courier Service Selection */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5">
+                    1. اختاري قالب شركة الشحن المطلوب
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Bosta */}
+                    <button
+                      type="button"
+                      onClick={() => setExportCourier('bosta')}
+                      className={cn(
+                        'p-4 rounded-2xl border text-right transition-all flex flex-col justify-between relative group',
+                        exportCourier === 'bosta'
+                          ? 'border-royal bg-royal/5 ring-2 ring-royal/30 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                          <Truck size={18} />
+                        </div>
+                        <span className="text-[10px] bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded-full">
+                          الأكثر طلباً 🇪🇬
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm mb-0.5">شركة بوسطة (Bosta)</p>
+                        <p className="text-xs text-gray-500 leading-snug">
+                          قالب الرفع الجماعي (Bulk Upload) المعتمد رسمياً في منصة بوسطة
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Mylerz */}
+                    <button
+                      type="button"
+                      onClick={() => setExportCourier('mylerz')}
+                      className={cn(
+                        'p-4 rounded-2xl border text-right transition-all flex flex-col justify-between relative group',
+                        exportCourier === 'mylerz'
+                          ? 'border-royal bg-royal/5 ring-2 ring-royal/30 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                          <Zap size={18} />
+                        </div>
+                        <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                          شحن سريع
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm mb-0.5">شركة مايلرز (Mylerz)</p>
+                        <p className="text-xs text-gray-500 leading-snug">
+                          شيت معتمد لشحن التجارة الإلكترونية وسرعة التسليم في المحافظات
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Universal Detailed */}
+                    <button
+                      type="button"
+                      onClick={() => setExportCourier('universal')}
+                      className={cn(
+                        'p-4 rounded-2xl border text-right transition-all flex flex-col justify-between relative group',
+                        exportCourier === 'universal'
+                          ? 'border-royal bg-royal/5 ring-2 ring-royal/30 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                          <FileSpreadsheet size={18} />
+                        </div>
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                          شامل وتفصيلي
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm mb-0.5">كشف تسليم شامل</p>
+                        <p className="text-xs text-gray-500 leading-snug">
+                          إكسل مفصل بالقطع والأسعار لجميع شركات الشحن (أرامكس، سبرنت، إلخ)
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Step 2: Orders Scope Selection */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5">
+                    2. حددي نطاق الطلبات المراد تصديرها
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-gray-50/80 p-3 rounded-2xl border border-gray-100">
+                    <label className={cn(
+                      "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
+                      exportScope === 'confirmed' ? "bg-white border-royal shadow-xs ring-1 ring-royal/20" : "bg-white/60 border-transparent hover:bg-white"
+                    )}>
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name="exportScope"
+                          checked={exportScope === 'confirmed'}
+                          onChange={() => setExportScope('confirmed')}
+                          className="accent-royal"
+                        />
+                        <span className="text-sm font-bold text-gray-900">المؤكدة والجاهزة للشحن فقط</span>
+                      </div>
+                      <span className="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">
+                        {counts.confirmed} طلب
+                      </span>
+                    </label>
+
+                    {selectedOrderIds.length > 0 && (
+                      <label className={cn(
+                        "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
+                        exportScope === 'selected' ? "bg-white border-royal shadow-xs ring-1 ring-royal/20" : "bg-white/60 border-transparent hover:bg-white"
+                      )}>
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="radio"
+                            name="exportScope"
+                            checked={exportScope === 'selected'}
+                            onChange={() => setExportScope('selected')}
+                            className="accent-royal"
+                          />
+                          <span className="text-sm font-bold text-gray-900">الطلبات المحددة يدوياً</span>
+                        </div>
+                        <span className="text-xs bg-royal text-white font-bold px-2 py-0.5 rounded-full">
+                          {selectedOrderIds.length} محدد
+                        </span>
+                      </label>
+                    )}
+
+                    <label className={cn(
+                      "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
+                      exportScope === 'filtered' ? "bg-white border-royal shadow-xs ring-1 ring-royal/20" : "bg-white/60 border-transparent hover:bg-white"
+                    )}>
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name="exportScope"
+                          checked={exportScope === 'filtered'}
+                          onChange={() => setExportScope('filtered')}
+                          className="accent-royal"
+                        />
+                        <span className="text-sm font-bold text-gray-900">المعروضة بالجدول حالياً</span>
+                      </div>
+                      <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                        {filteredOrders.length} طلب
+                      </span>
+                    </label>
+
+                    <label className={cn(
+                      "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
+                      exportScope === 'all' ? "bg-white border-royal shadow-xs ring-1 ring-royal/20" : "bg-white/60 border-transparent hover:bg-white"
+                    )}>
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name="exportScope"
+                          checked={exportScope === 'all'}
+                          onChange={() => setExportScope('all')}
+                          className="accent-royal"
+                        />
+                        <span className="text-sm font-bold text-gray-900">جميع الطلبات النشطة</span>
+                      </div>
+                      <span className="text-xs bg-gray-200 text-gray-800 font-bold px-2 py-0.5 rounded-full">
+                        {counts.all} طلب
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Step 3: Options */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5">
+                    3. خيارات المعالجة والأمان
+                  </label>
+                  <div className="space-y-2.5 bg-gray-50/60 p-3.5 rounded-2xl border border-gray-100 text-sm">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoMarkAsShipped}
+                        onChange={e => setAutoMarkAsShipped(e.target.checked)}
+                        className="w-4 h-4 rounded text-royal accent-royal cursor-pointer"
+                      />
+                      <div>
+                        <span className="font-bold text-gray-900 block leading-tight">
+                          تحديث حالة الطلبات المصدّرة تلقائياً إلى "تم الشحن 🚚"
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          يوفر وقتك ولا تحتاجي لتحديث كل طلب على حدة بعد تسليمه للمندوب
+                        </span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeItemDetails}
+                        onChange={e => setIncludeItemDetails(e.target.checked)}
+                        className="w-4 h-4 rounded text-royal accent-royal cursor-pointer"
+                      />
+                      <div>
+                        <span className="font-bold text-gray-900 block leading-tight">
+                          تضمين تفاصيل الموديلات والأكواد والمقاسات والألوان في وصف الطرد
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          تسهل على المندوب والعميلة التأكد من المحتويات وتجنب أخطاء التبديل
+                        </span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={allowOpenPackage}
+                        onChange={e => setAllowOpenPackage(e.target.checked)}
+                        className="w-4 h-4 rounded text-royal accent-royal cursor-pointer"
+                      />
+                      <div>
+                        <span className="font-bold text-gray-900 block leading-tight">
+                          تفعيل شرط حق المعاينة وفتح الشحنة مع المندوب (Allow Open)
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          بوليصة الشحن ستتضمن تنبيهاً رسمي للمندوب بالسماح للعميلة بفحص القطعة
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Step 4: Summary Bar & Action */}
+                <div className="bg-gradient-to-r from-royal/10 via-blue-50 to-indigo-50/50 p-4 rounded-2xl border border-royal/15 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-gray-600">إجمالي الشحنات الجاهزة للتصدير الآن:</p>
+                    <p className="text-lg font-black text-royal font-english">
+                      {previewOrders.length} <span className="text-xs font-arabic text-gray-600 font-normal">شحنة</span>
+                      {' — '}
+                      <span className="text-emerald-700">{formatPrice(totalCOD)}</span>
+                      <span className="text-xs font-arabic text-gray-500 font-normal"> (تحصيل COD متوقع)</span>
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button
+                      fullWidth
+                      loading={isExporting}
+                      onClick={performCourierExport}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold font-arabic px-6 py-3 shadow-md gap-2 whitespace-nowrap"
+                    >
+                      <Download size={18} />
+                      <span>تنزيل شيت {exportCourier === 'bosta' ? 'بوسطة' : exportCourier === 'mylerz' ? 'مايلرز' : 'الإكسل'} فوراً</span>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={isExporting}
+                      onClick={() => setShowExportModal(false)}
+                      className="font-arabic"
+                    >
+                      إلغاء
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
         </Modal>
       </div>
     </AdminLayout>
