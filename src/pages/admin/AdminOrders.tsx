@@ -4,7 +4,8 @@ import {
   Search, MessageCircle, Download, Eye, ChevronDown, Check,
   Sparkles, CheckCircle2, Truck, XCircle, Printer,
   MapPin, PackageCheck, AlertCircle, ArrowUpRight,
-  Copy, Star, Smartphone, Monitor, Tablet
+  Copy, Star, Smartphone, Monitor, Tablet,
+  Trash2, Archive, ArchiveRestore
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { AdminLayout } from '@/components/admin/AdminLayout'
@@ -206,6 +207,9 @@ export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [archivingId, setArchivingId] = useState<string | null>(null)
 
   // Query all orders
   const { data: allOrders, isLoading } = useQuery({
@@ -221,9 +225,41 @@ export default function AdminOrders() {
     staleTime: 1000 * 30,
   })
 
+  // Helper to determine if order is archived
+  function isOrderArchived(order: Order): boolean {
+    return Boolean(
+      (order as any).is_archived ||
+      order.admin_notes?.includes('[مؤرشف]') ||
+      order.admin_notes?.includes('[ARCHIVED]')
+    )
+  }
+
+  // Active vs Archived split
+  const nonArchivedOrders = (allOrders || []).filter(o => !isOrderArchived(o))
+  const archivedOrders = (allOrders || []).filter(o => isOrderArchived(o))
+
+  // Status counts for tabs
+  const counts = {
+    all: nonArchivedOrders.length,
+    new: nonArchivedOrders.filter(o => o.status === 'new').length,
+    confirmed: nonArchivedOrders.filter(o => o.status === 'confirmed').length,
+    shipped: nonArchivedOrders.filter(o => o.status === 'shipped').length,
+    delivered: nonArchivedOrders.filter(o => o.status === 'delivered').length,
+    cancelled: nonArchivedOrders.filter(o => o.status === 'cancelled').length,
+    archived: archivedOrders.length,
+  }
+
   // Filter in memory for instant lightning-fast tab switching & search
   const filteredOrders = (allOrders || []).filter(order => {
-    const matchesStatus = !statusFilter || order.status === statusFilter
+    const isArchived = isOrderArchived(order)
+
+    if (statusFilter === 'archived') {
+      if (!isArchived) return false
+    } else {
+      if (isArchived) return false
+      if (statusFilter && order.status !== statusFilter) return false
+    }
+
     const term = search.trim().toLowerCase()
     const matchesSearch =
       !term ||
@@ -232,18 +268,8 @@ export default function AdminOrders() {
       order.phone.includes(term) ||
       order.city.toLowerCase().includes(term) ||
       (order.device_id && order.device_id.toLowerCase().includes(term))
-    return matchesStatus && matchesSearch
+    return matchesSearch
   })
-
-  // Status counts for tabs
-  const counts = {
-    all: allOrders?.length || 0,
-    new: allOrders?.filter(o => o.status === 'new').length || 0,
-    confirmed: allOrders?.filter(o => o.status === 'confirmed').length || 0,
-    shipped: allOrders?.filter(o => o.status === 'shipped').length || 0,
-    delivered: allOrders?.filter(o => o.status === 'delivered').length || 0,
-    cancelled: allOrders?.filter(o => o.status === 'cancelled').length || 0,
-  }
 
   async function openOrderDetail(order: Order) {
     const { data } = await supabase
@@ -271,6 +297,78 @@ export default function AdminOrders() {
 
     if (selectedOrder && selectedOrder.id === orderId) {
       setSelectedOrder(prev => (prev ? { ...prev, status: newStatus } : null))
+    }
+  }
+
+  // Toggle Archive Status
+  async function toggleArchive(order: Order) {
+    setArchivingId(order.id)
+    const currentlyArchived = isOrderArchived(order)
+    const newArchived = !currentlyArchived
+
+    try {
+      // 1. Attempt updating is_archived column in Supabase
+      const { error } = await supabase
+        .from('orders')
+        .update({ is_archived: newArchived } as any)
+        .eq('id', order.id)
+
+      if (error) {
+        // Fallback: tag in admin_notes if column not yet added in Supabase
+        let updatedNotes = order.admin_notes || ''
+        if (newArchived) {
+          updatedNotes = `[مؤرشف] ${updatedNotes}`.trim()
+        } else {
+          updatedNotes = updatedNotes.replace('[مؤرشف]', '').replace('[ARCHIVED]', '').trim()
+        }
+        const { error: notesErr } = await supabase
+          .from('orders')
+          .update({ admin_notes: updatedNotes })
+          .eq('id', order.id)
+
+        if (notesErr) throw notesErr
+      }
+
+      toast.success(newArchived ? 'تم نقل الطلب إلى الأرشيف 📦' : 'تمت استعادة الطلب من الأرشيف ✓')
+      qc.invalidateQueries({ queryKey: ['admin-orders-list'] })
+      if (selectedOrder?.id === order.id) {
+        setSelectedOrder(null)
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء أرشفة الطلب'
+      toast.error(msg)
+    } finally {
+      setArchivingId(null)
+    }
+  }
+
+  // Completely Delete Order
+  async function confirmDeleteOrder() {
+    if (!orderToDelete) return
+    setDeleting(true)
+    try {
+      // 1. Delete associated order items first
+      await supabase.from('order_items').delete().eq('order_id', orderToDelete.id)
+
+      // 2. Delete the order record
+      const { error } = await supabase.from('orders').delete().eq('id', orderToDelete.id)
+
+      if (error) {
+        toast.error(`تعذر حذف الطلب: ${error.message}`)
+        return
+      }
+
+      toast.success(`تم حذف الطلب رقم ${orderToDelete.order_number} نهائياً 🗑️`)
+      qc.invalidateQueries({ queryKey: ['admin-orders-list'] })
+      if (selectedOrder?.id === orderToDelete.id) {
+        setSelectedOrder(null)
+      }
+      setOrderToDelete(null)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء حذف الطلب'
+      toast.error(msg)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -556,6 +654,21 @@ export default function AdminOrders() {
               {counts.cancelled}
             </span>
           </button>
+
+          <button
+            onClick={() => setStatusFilter('archived')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold font-arabic transition-all whitespace-nowrap flex items-center gap-2 ${
+              statusFilter === 'archived'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Archive size={15} />
+            <span>الأرشيف</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs ${statusFilter === 'archived' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'}`}>
+              {counts.archived}
+            </span>
+          </button>
         </div>
 
         {/* Search bar */}
@@ -683,7 +796,7 @@ export default function AdminOrders() {
 
                       {/* Row Actions */}
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center justify-center gap-1.5">
+                        <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => openOrderDetail(order)}
                             className="p-1.5 rounded-lg hover:bg-royal/10 text-gray-500 hover:text-royal transition-colors"
@@ -698,6 +811,27 @@ export default function AdminOrders() {
                             title="إرسال إشعار للعميل عبر واتساب"
                           >
                             <MessageCircle size={16} />
+                          </button>
+
+                          <button
+                            onClick={() => toggleArchive(order)}
+                            disabled={archivingId === order.id}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isOrderArchived(order)
+                                ? 'hover:bg-amber-50 text-amber-600 hover:text-amber-700'
+                                : 'hover:bg-slate-100 text-gray-400 hover:text-slate-700'
+                            }`}
+                            title={isOrderArchived(order) ? 'استعادة من الأرشيف' : 'أرشفة الطلب'}
+                          >
+                            {isOrderArchived(order) ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                          </button>
+
+                          <button
+                            onClick={() => setOrderToDelete(order)}
+                            className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-colors"
+                            title="حذف الطلب نهائياً"
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
@@ -983,11 +1117,11 @@ export default function AdminOrders() {
                 </Button>
               </div>
 
-              {/* Action Buttons: WhatsApp & Print Invoice */}
-              <div className="pt-3 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
+              {/* Action Buttons: WhatsApp & Print Invoice & Archive & Delete */}
+              <div className="pt-3 border-t border-gray-100 flex flex-wrap gap-2.5">
                 <Button
                   onClick={() => sendCustomerStatusWhatsApp(selectedOrder)}
-                  className="flex-1 font-arabic bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                  className="flex-1 font-arabic bg-emerald-600 hover:bg-emerald-700 text-white gap-2 min-w-[200px]"
                 >
                   <MessageCircle size={18} />
                   <span>إرسال إشعار WhatsApp بحالة الطلب للعميل</span>
@@ -999,7 +1133,73 @@ export default function AdminOrders() {
                   className="font-arabic gap-2"
                 >
                   <Printer size={18} />
-                  <span>طباعة بوليصة الشحن (PDF)</span>
+                  <span>طباعة البوليصة (PDF)</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => toggleArchive(selectedOrder)}
+                  disabled={archivingId === selectedOrder.id}
+                  className={`font-arabic gap-2 ${
+                    isOrderArchived(selectedOrder)
+                      ? 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                      : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {isOrderArchived(selectedOrder) ? <ArchiveRestore size={18} /> : <Archive size={18} />}
+                  <span>{isOrderArchived(selectedOrder) ? 'استعادة من الأرشيف' : 'أرشفة الطلب'}</span>
+                </Button>
+
+                <Button
+                  variant="danger"
+                  onClick={() => setOrderToDelete(selectedOrder)}
+                  className="font-arabic gap-2"
+                >
+                  <Trash2 size={18} />
+                  <span>حذف الطلب نهائياً</span>
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          open={!!orderToDelete}
+          onClose={() => setOrderToDelete(null)}
+          title="تأكيد حذف الطلب نهائياً"
+          size="sm"
+        >
+          {orderToDelete && (
+            <div className="space-y-4 text-right font-arabic">
+              <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-2">
+                <Trash2 size={24} />
+              </div>
+              <p className="text-gray-800 text-sm leading-relaxed text-center">
+                هل أنتِ متأكدة من حذف الطلب رقم <strong className="font-english text-rose-600">{orderToDelete.order_number}</strong> الخاص بالعميلة <strong>{orderToDelete.customer_name}</strong>؟
+              </p>
+              <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-800 leading-normal">
+                ⚠️ <strong>تنبيه:</strong> سيتم مسح هذا الطلب وجميع المنتجات المرتبطة به نهائياً من قاعدة البيانات، ولن تتمكني من استرجاعه لاحقاً.
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  variant="danger"
+                  fullWidth
+                  loading={deleting}
+                  onClick={confirmDeleteOrder}
+                  className="gap-1.5 font-bold"
+                >
+                  <Trash2 size={16} />
+                  نعم، احذف نهائياً
+                </Button>
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  disabled={deleting}
+                  onClick={() => setOrderToDelete(null)}
+                >
+                  إلغاء
                 </Button>
               </div>
             </div>

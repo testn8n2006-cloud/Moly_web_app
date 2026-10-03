@@ -158,6 +158,7 @@ export interface Database {
           device_id: string | null
           device_type: string | null
           browser_info: string | null
+          is_archived?: boolean | null
           created_at: string
           updated_at: string
         }
@@ -180,6 +181,7 @@ export interface Database {
           device_id?: string | null
           device_type?: string | null
           browser_info?: string | null
+          is_archived?: boolean | null
           created_at?: string
           updated_at?: string
         }

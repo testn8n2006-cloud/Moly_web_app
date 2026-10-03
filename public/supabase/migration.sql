@@ -397,9 +397,11 @@ CREATE POLICY "favorites_own" ON favorites FOR ALL USING (user_id = auth.uid());
 CREATE POLICY "orders_insert" ON orders FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "orders_select_own" ON orders FOR SELECT USING (user_id = auth.uid() OR is_admin());
 CREATE POLICY "orders_admin_update" ON orders FOR UPDATE USING (is_admin());
+CREATE POLICY "orders_admin_delete" ON orders FOR DELETE USING (is_admin());
 
 -- Order items: insert via RPC only, select own order's items, admin all
 CREATE POLICY "order_items_insert" ON order_items FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "order_items_admin_delete" ON order_items FOR DELETE USING (is_admin());
 CREATE POLICY "order_items_select" ON order_items FOR SELECT
   USING (
     EXISTS (SELECT 1 FROM orders o WHERE o.id = order_id AND (o.user_id = auth.uid() OR is_admin()))
