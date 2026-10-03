@@ -6,6 +6,7 @@ import { useFavorites } from '@/contexts/FavoritesContext'
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { SearchModal } from './SearchModal'
+import { PromoBar } from './PromoBar'
 import { cn } from '@/lib/utils'
 
 export function Header() {
@@ -51,11 +52,12 @@ export function Header() {
 
   return (
     <header className={cn(
-      'fixed top-0 inset-x-0 z-40 transition-all duration-300',
+      'sticky top-0 inset-x-0 z-40 transition-all duration-300',
       scrolled 
         ? 'bg-white/95 dark:bg-slate-950/95 backdrop-blur-md shadow-sm border-b border-gray-100 dark:border-slate-800' 
         : 'bg-white dark:bg-slate-950 border-b border-transparent dark:border-slate-900'
     )}>
+      <PromoBar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo */}

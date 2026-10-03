@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Sparkles } from 'lucide-react'
 
 export function PromoBar() {
   const { t } = useLanguage()
@@ -11,7 +11,7 @@ export function PromoBar() {
   const { data: content } = useQuery({
     queryKey: ['promo-bar'],
     queryFn: async () => {
-      const { data } = await supabase.from('site_content').select('*').eq('key', 'promo_bar').single()
+      const { data } = await supabase.from('site_content').select('*').eq('key', 'promo_bar').maybeSingle()
       return data
     },
     staleTime: 1000 * 60 * 5,
@@ -23,12 +23,17 @@ export function PromoBar() {
   if (!text) return null
 
   return (
-    <div className="bg-royal text-white text-center py-2 px-8 text-sm font-arabic relative">
-      <span>{text}</span>
+    <div className="bg-gradient-to-r from-royal-dark via-royal to-blue-950 text-white text-center py-2 px-8 text-xs sm:text-sm font-arabic relative shadow-inner z-50 border-b border-white/10">
+      <div className="flex items-center justify-center gap-2">
+        <Sparkles size={14} className="text-amber-300 animate-pulse flex-shrink-0" />
+        <span className="font-semibold tracking-wide leading-relaxed">{text}</span>
+        <Sparkles size={14} className="text-amber-300 animate-pulse flex-shrink-0 hidden sm:inline" />
+      </div>
       <button
         onClick={() => setDismissed(true)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 hover:bg-white/20 rounded p-0.5 transition-colors"
-        aria-label="Dismiss"
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 rounded-full p-1 transition-colors"
+        aria-label="إغلاق الشريط"
+        title="إغلاق"
       >
         <X size={14} />
       </button>

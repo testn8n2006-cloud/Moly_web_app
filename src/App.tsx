@@ -8,7 +8,6 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
-import { PromoBar } from '@/components/layout/PromoBar'
 import { VisitorTracker } from '@/components/layout/VisitorTracker'
 import { SocialProofPopup } from '@/components/layout/SocialProofPopup'
 import { AdminGuard } from '@/components/admin/AdminGuard'
@@ -43,9 +42,8 @@ const AdminSocialProof = lazy(() => import('@/pages/admin/AdminSocialProof'))
 function StorefrontLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <PromoBar />
       <Header />
-      <main className="flex-1 pt-16 sm:pt-20">
+      <main className="flex-1">
         {children}
       </main>
       <Footer />
