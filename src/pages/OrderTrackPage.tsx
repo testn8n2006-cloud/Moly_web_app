@@ -194,7 +194,7 @@ export default function OrderTrackPage() {
                       <CheckCircle2 size={18} />
                     </div>
                     <span className="font-arabic font-bold text-[11px] sm:text-xs text-gray-950 dark:text-white mt-2">
-                      {t('تم الاستلام', 'Received')}
+                      {t('استلام الطلب', 'Order Placed')}
                     </span>
                     <span className="font-arabic text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">
                       {formatDate(order.created_at)}
@@ -239,7 +239,7 @@ export default function OrderTrackPage() {
                       <Sparkles size={18} />
                     </div>
                     <span className="font-arabic font-bold text-[11px] sm:text-xs text-gray-950 dark:text-white mt-2">
-                      {t('تم التسليم', 'Delivered')}
+                      {t('تم الاستلام ✓', 'Delivered ✓')}
                     </span>
                     <span className="font-arabic text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">
                       {currentStep >= 4 ? t('استلم بنجاح ✓', 'Delivered ✓') : t('الوصول', 'Final')}

@@ -732,7 +732,7 @@ export default function AdminOrders() {
               {selectedOrder.status !== 'cancelled' ? (
                 <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                   <p className="text-xs font-bold text-gray-500 font-arabic mb-3">مرحلة تقدم الطلب:</p>
-                  <div className="grid grid-cols-3 gap-2 text-center relative">
+                  <div className="grid grid-cols-4 gap-2 text-center relative">
                     {/* Step 1 */}
                     <div className="flex flex-col items-center">
                       <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm text-xs font-bold">
@@ -745,30 +745,45 @@ export default function AdminOrders() {
                     {/* Step 2 */}
                     <div className="flex flex-col items-center">
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm text-xs font-bold transition-colors ${
-                        selectedOrder.status === 'confirmed' || selectedOrder.status === 'shipped'
+                        selectedOrder.status !== 'new'
                           ? 'bg-amber-500 text-white'
                           : 'bg-gray-200 text-gray-400'
                       }`}>
-                        {selectedOrder.status === 'shipped' ? <Check size={16} /> : <PackageCheck size={16} />}
+                        {selectedOrder.status === 'shipped' || selectedOrder.status === 'delivered' ? <Check size={16} /> : <PackageCheck size={16} />}
                       </div>
                       <span className="text-xs font-bold text-gray-800 font-arabic mt-1.5">التأكيد والتجهيز</span>
                       <span className="text-[10px] text-gray-400 font-arabic">
-                        {selectedOrder.status === 'confirmed' ? 'جاري الآن' : selectedOrder.status === 'shipped' ? 'مكتمل' : 'قيد الانتظار'}
+                        {selectedOrder.status === 'confirmed' ? 'جاري الآن' : (selectedOrder.status === 'shipped' || selectedOrder.status === 'delivered') ? 'مكتمل ✓' : 'قيد الانتظار'}
                       </span>
                     </div>
 
                     {/* Step 3 */}
                     <div className="flex flex-col items-center">
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm text-xs font-bold transition-colors ${
-                        selectedOrder.status === 'shipped'
+                        selectedOrder.status === 'shipped' || selectedOrder.status === 'delivered'
                           ? 'bg-emerald-600 text-white'
                           : 'bg-gray-200 text-gray-400'
                       }`}>
-                        <Truck size={16} />
+                        {selectedOrder.status === 'delivered' ? <Check size={16} /> : <Truck size={16} />}
                       </div>
-                      <span className="text-xs font-bold text-gray-800 font-arabic mt-1.5">تم الشحن والتسليم</span>
+                      <span className="text-xs font-bold text-gray-800 font-arabic mt-1.5">الشحن والتسليم</span>
                       <span className="text-[10px] text-gray-400 font-arabic">
-                        {selectedOrder.status === 'shipped' ? 'خرج للتوصيل' : 'بانتظار الشحن'}
+                        {selectedOrder.status === 'delivered' ? 'مكتمل ✓' : selectedOrder.status === 'shipped' ? 'خرج للتوصيل' : 'بانتظار الشحن'}
+                      </span>
+                    </div>
+
+                    {/* Step 4 */}
+                    <div className="flex flex-col items-center">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm text-xs font-bold transition-colors ${
+                        selectedOrder.status === 'delivered'
+                          ? 'bg-teal-600 text-white ring-4 ring-teal-400/20'
+                          : 'bg-gray-200 text-gray-400'
+                      }`}>
+                        <Sparkles size={16} />
+                      </div>
+                      <span className="text-xs font-bold text-gray-800 font-arabic mt-1.5">تم الاستلام</span>
+                      <span className="text-[10px] text-gray-400 font-arabic">
+                        {selectedOrder.status === 'delivered' ? 'استلم العميل ✓' : 'بانتظار الاستلام'}
                       </span>
                     </div>
                   </div>
