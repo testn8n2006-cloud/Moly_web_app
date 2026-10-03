@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { MessageCircle, ShoppingBag, ChevronDown } from 'lucide-react'
+import { MessageCircle, ShoppingBag, ChevronDown, ShieldCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCart } from '@/contexts/CartContext'
 import { Button } from '@/components/ui/Button'
-import { formatPrice, buildWhatsAppMessage, EGYPT_GOVERNORATES } from '@/lib/utils'
+import { formatPrice, buildWhatsAppMessage, EGYPT_GOVERNORATES, validateEgyptianPhone } from '@/lib/utils'
 import type { CheckoutFormData, OrderResult } from '@/lib/types'
 import { getDeviceInfo } from '@/lib/device'
 import { getProductSku, formatProductSku } from '@/lib/sku'
@@ -103,6 +103,24 @@ export default function CheckoutPage() {
   }
 
   async function onSubmit(data: CheckoutFormData) {
+    // Anti-Spam / Rate Limiting (Prevent repeat spam orders within 45s)
+    const lastOrderTime = localStorage.getItem('ra_last_order_at')
+    if (lastOrderTime) {
+      const elapsedSec = (Date.now() - parseInt(lastOrderTime, 10)) / 1000
+      if (elapsedSec < 45) {
+        toast.error(t('لقد قمتِ بإرسال طلب بالفعل منذ قليل! يرجى الانتظار قليلاً أو تأكيد طلبكِ عبر واتساب.', 'You recently placed an order. Please wait a moment.'))
+        return
+      }
+    }
+
+    // Phone validation & normalization
+    const phoneCheck = validateEgyptianPhone(data.phone)
+    if (!phoneCheck.valid) {
+      toast.error(phoneCheck.message || 'يرجى إدخال رقم محمول مصري صحيح')
+      return
+    }
+    const normalizedPhone = phoneCheck.normalized
+
     setSubmitting(true)
     try {
       // Format custom measurements if any item has size === 'مقاس خاص'
@@ -135,10 +153,10 @@ export default function CheckoutPage() {
       }
 
       const { data: result, error } = await supabase.rpc('create_order', {
-        p_customer_name: data.customer_name,
-        p_phone: data.phone,
+        p_customer_name: data.customer_name.trim(),
+        p_phone: normalizedPhone,
         p_city: data.city,
-        p_address: data.address,
+        p_address: data.address.trim(),
         p_notes: finalNotes || '',
         p_coupon_code: couponCode || null,
       })
@@ -152,7 +170,10 @@ export default function CheckoutPage() {
         return
       }
 
-      // Attach client device metadata to order record for admin recognition & analytics
+      // Record timestamp to prevent rapid duplicate spam
+      localStorage.setItem('ra_last_order_at', Date.now().toString())
+
+      // Attach client device metadata to order record for admin recognition & fraud detection
       const deviceInfo = getDeviceInfo()
       if (orderResult.order_id) {
         try {
@@ -185,17 +206,17 @@ export default function CheckoutPage() {
         shippingFee: orderResult.shipping_fee!,
         total: orderResult.total!,
         couponCode: couponCode || null,
-        customerName: data.customer_name,
-        phone: data.phone,
+        customerName: data.customer_name.trim(),
+        phone: normalizedPhone,
         city: data.city,
-        address: data.address,
+        address: data.address.trim(),
         notes: finalNotes || null,
         currency,
       })
 
       await clearCart()
 
-      // Open WhatsApp
+      // Open WhatsApp for customer to confirm
       const waUrl = `https://wa.me/${waNumber}?text=${waMsg}`
       window.open(waUrl, '_blank')
 
@@ -203,6 +224,10 @@ export default function CheckoutPage() {
         state: {
           orderNumber: orderResult.order_number,
           total: orderResult.total,
+          customerName: data.customer_name.trim(),
+          phone: normalizedPhone,
+          city: data.city,
+          address: data.address.trim(),
           waNumber,
           waMsg,
         },
@@ -233,9 +258,16 @@ export default function CheckoutPage() {
                 <input
                   {...register('customer_name', {
                     required: t('مطلوب', 'Required'),
-                    minLength: { value: 2, message: t('اسم قصير جداً', 'Name too short') },
+                    minLength: { value: 3, message: t('الاسم قصير جداً', 'Name too short') },
+                    validate: (val) => {
+                      const words = val.trim().split(/\s+/).filter(Boolean)
+                      if (words.length < 2) {
+                        return t('يرجى كتابة الاسم ثنائياً على الأقل لسهولة التواصل والتوصيل', 'Please enter your first and last name')
+                      }
+                      return true
+                    },
                   })}
-                  placeholder={t('الاسم الكامل', 'Full Name')}
+                  placeholder={t('مثال: سارة أحمد محمود', 'e.g. Sara Ahmed')}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl font-arabic focus:outline-none focus:ring-2 focus:ring-royal/40 focus:border-royal"
                 />
                 {errors.customer_name && (
@@ -246,18 +278,18 @@ export default function CheckoutPage() {
               {/* Phone */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5 font-arabic">
-                  {t('رقم الهاتف', 'Phone Number')} <span className="text-red-500">*</span>
+                  {t('رقم الهاتف المحمول (واتساب)', 'Mobile Number (WhatsApp)')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register('phone', {
                     required: t('مطلوب', 'Required'),
-                    pattern: {
-                      value: /^[\d\s\+\-\(\)]{7,20}$/,
-                      message: t('رقم غير صحيح', 'Invalid phone number'),
+                    validate: (val) => {
+                      const res = validateEgyptianPhone(val)
+                      return res.valid || res.message || t('رقم غير صحيح', 'Invalid phone number')
                     },
                   })}
                   type="tel"
-                  placeholder="01X XXXX XXXX أو +20 1X XXXX XXXX"
+                  placeholder="010XXXXXXXX أو 011XXXXXXXX"
                   dir="ltr"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl font-english focus:outline-none focus:ring-2 focus:ring-royal/40 focus:border-royal"
                 />
@@ -327,18 +359,36 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Seriousness & Anti-Fraud Notice */}
+          <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 text-xs font-arabic text-amber-950 flex items-start gap-3 shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-amber-200/70 flex items-center justify-center flex-shrink-0 text-amber-800 mt-0.5">
+              <ShieldCheck size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-xs sm:text-sm text-amber-900 mb-1">
+                {t('تأكيد جدية الطلب وحجز الفستان 👗✨', 'Order Seriousness & Dress Reservation 👗✨')}
+              </p>
+              <p className="text-amber-800 leading-relaxed text-[11px] sm:text-xs">
+                {t(
+                  'حرصاً على حجز الفستان بمقاسكِ المطلوب من المشغل ومنع الطلبات الوهمية، سيتم فتح واتساب لتأكيد موعد استلامك فوراً. لا يتم خروج أي شحنة دون التأكيد لضمان أعلى جودة في التوصيل.',
+                  'To reserve your dress size immediately and prevent spam orders, WhatsApp will open to confirm your delivery date. Orders are processed upon confirmation.'
+                )}
+              </p>
+            </div>
+          </div>
+
           <Button
             type="submit"
             fullWidth
             size="lg"
             loading={submitting}
-            className="font-arabic py-4 text-base"
+            className="font-arabic py-4 text-base shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
           >
             <MessageCircle size={22} />
-            {t('تأكيد الطلب وإرسال عبر واتساب', 'Confirm & Send via WhatsApp')}
+            {t('تأكيد الطلب وإرسال عبر واتساب 💬', 'Confirm Order & Send via WhatsApp 💬')}
           </Button>
           <p className="text-xs text-gray-400 text-center font-arabic">
-            {t('سيتم فتح واتساب تلقائياً بعد تأكيد الطلب', 'WhatsApp will open automatically after order confirmation')}
+            {t('سيتم فتح واتساب تلقائياً بعد تأكيد الطلب لإرسال تفاصيل الحجز', 'WhatsApp will open automatically after order confirmation to verify booking')}
           </p>
         </form>
 

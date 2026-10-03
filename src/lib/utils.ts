@@ -166,6 +166,49 @@ export const EGYPT_GOVERNORATES = [
   'جنوب سيناء',
 ]
 
+/**
+ * Validates Egyptian mobile phone numbers (010, 011, 012, 015 - 11 digits)
+ * Supports inputs with spaces, hyphens, and +20 / 20 / 0020 prefixes.
+ */
+export function validateEgyptianPhone(rawPhone: string): { valid: boolean; normalized: string; message?: string } {
+  if (!rawPhone || !rawPhone.trim()) {
+    return { valid: false, normalized: '', message: 'رقم الهاتف مطلوب' }
+  }
+
+  // Clean all non-digit characters
+  let clean = rawPhone.replace(/\D/g, '')
+
+  // Remove leading zeros if with country code: 0020... -> 20...
+  if (clean.startsWith('0020')) {
+    clean = clean.slice(2)
+  }
+
+  // If starts with 20 and has 12 digits, strip 20
+  if (clean.startsWith('20') && clean.length === 12) {
+    clean = clean.slice(2)
+  }
+
+  // If starts with 1 and has 10 digits (e.g. 1012345678), add leading 0
+  if (!clean.startsWith('0') && clean.length === 10) {
+    clean = '0' + clean
+  }
+
+  const isValidFormat = /^01[0125][0-9]{8}$/.test(clean)
+
+  if (!isValidFormat) {
+    return {
+      valid: false,
+      normalized: clean,
+      message: 'يرجى إدخال رقم محمول مصري صحيح (11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015)',
+    }
+  }
+
+  return {
+    valid: true,
+    normalized: clean,
+  }
+}
+
 // Alias for backwards compatibility
 export const SAUDI_CITIES = EGYPT_GOVERNORATES
 
