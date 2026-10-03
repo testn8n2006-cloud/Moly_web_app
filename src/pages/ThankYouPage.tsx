@@ -26,8 +26,9 @@ export default function ThankYouPage() {
   const [confirmed, setConfirmed] = useState(false)
 
   function openWhatsApp() {
-    if (state?.waNumber && state?.waMsg) {
-      window.open(`https://wa.me/${state.waNumber}?text=${state.waMsg}`, '_blank')
+    const num = state?.waNumber || '201004590848'
+    if (state?.waMsg) {
+      window.open(`https://wa.me/${num}?text=${state.waMsg}`, '_blank')
       setConfirmed(true)
     }
   }

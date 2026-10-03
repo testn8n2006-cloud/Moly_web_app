@@ -67,6 +67,10 @@ export default function AdminSettings() {
         .upsert({ key, value }, { onConflict: 'key' })
     }
     qc.invalidateQueries({ queryKey: ['admin-settings-all'] })
+    qc.invalidateQueries({ queryKey: ['whatsapp-number'] })
+    qc.invalidateQueries({ queryKey: ['settings-wa'] })
+    qc.invalidateQueries({ queryKey: ['whatsapp-contact'] })
+    qc.invalidateQueries({ queryKey: ['settings-checkout'] })
     setLocalChanges({})
     toast.success('تم حفظ الإعدادات')
     setSaving(false)
@@ -112,8 +116,8 @@ export default function AdminSettings() {
               label="رقم واتساب (مع رمز الدولة، بدون +)"
               value={get('whatsapp_number')}
               onChange={e => set('whatsapp_number', e.target.value)}
-              placeholder="201000000000"
-              hint="مثال: 201012345678"
+              placeholder="201004590848"
+              hint="مثال: 201004590848"
             />
             <Input
               label="اسم المتجر"

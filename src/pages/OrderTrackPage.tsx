@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
   Search, Truck, CheckCircle2, PackageCheck, AlertCircle,
   MessageCircle, Scissors, Sparkles
@@ -19,6 +20,16 @@ export default function OrderTrackPage() {
   const [order, setOrder] = useState<OrderWithItems | null>(null)
   const [searched, setSearched] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // Dynamic WhatsApp Number from Settings
+  const { data: waNumber } = useQuery({
+    queryKey: ['whatsapp-number'],
+    queryFn: async () => {
+      const { data } = await supabase.from('settings').select('value').eq('key', 'whatsapp_number').single()
+      return data?.value || '201004590848'
+    },
+    staleTime: 1000 * 60 * 30,
+  })
 
   // Check URL params on initial load
   useEffect(() => {
@@ -346,7 +357,7 @@ export default function OrderTrackPage() {
               </div>
 
               <a
-                href={`https://wa.me/201000000000?text=${encodeURIComponent(`أهلاً R&A Couture 🌸 أود الاستفسار عن طلبي رقم: ${order.order_number}`)}`}
+                href={`https://wa.me/${waNumber || '201004590848'}?text=${encodeURIComponent(`أهلاً R&A Couture 🌸 أود الاستفسار عن طلبي رقم: ${order.order_number}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-arabic text-xs font-bold transition-colors shadow-sm whitespace-nowrap"

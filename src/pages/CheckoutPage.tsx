@@ -187,7 +187,7 @@ export default function CheckoutPage() {
         }
       }
 
-      const waNumber = settings?.whatsapp_number || ''
+      const waNumber = settings?.whatsapp_number || '201004590848'
       const waMsg = buildWhatsAppMessage({
         orderNumber: orderResult.order_number!,
         items: items.map(i => {
