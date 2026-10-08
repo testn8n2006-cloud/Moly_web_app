@@ -172,7 +172,7 @@ function TrustBadgesBar() {
 }
 
 function CategoryCards() {
-  const { t } = useLanguage()
+  const { t, isRTL } = useLanguage()
   const { data: content } = useQuery({
     queryKey: ['category-cards-content'],
     queryFn: async () => {
@@ -193,7 +193,7 @@ function CategoryCards() {
     'https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=1000'
 
   return (
-    <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
+    <section className="py-14 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto scroll-mt-24">
       <div className="text-center max-w-xl mx-auto mb-10 sm:mb-12">
         <span className="text-xs font-bold uppercase tracking-wider text-royal dark:text-blue-400 bg-royal/10 dark:bg-royal/30 px-3.5 py-1.5 rounded-full font-arabic">
           {t('التشكيلات المختارة', 'Curated Collections')}
@@ -210,62 +210,84 @@ function CategoryCards() {
         {/* Women Card */}
         <Link
           to="/women"
-          className="group relative h-80 sm:h-[420px] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900"
+          className="group relative h-[500px] sm:h-[580px] lg:h-[640px] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900 border border-gray-100 dark:border-slate-800"
         >
           <img
             src={womenImg}
             alt="Women Couture"
-            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700"
+            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
             loading="lazy"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1000'
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0c1836]/90 via-[#0c1836]/30 to-transparent" />
-          <div className="absolute top-5 right-5">
-            <span className="bg-amber-400 text-royal-dark text-xs font-extrabold px-3 py-1 rounded-full shadow-md font-arabic">
-              {t('فساتين & عبايات', 'Dresses & Abayas')}
+          {/* Subtle bottom shadow gradient: leaves top 60% of image completely clear and bright */}
+          <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none" />
+
+          {/* Top Badge */}
+          <div className="absolute top-5 right-5 z-10">
+            <span className="bg-amber-400 text-royal-dark text-xs font-extrabold px-3.5 py-1.5 rounded-full shadow-lg font-arabic flex items-center gap-1.5">
+              <Sparkles size={13} className="text-royal-dark" />
+              <span>{t('فساتين & عبايات', 'Dresses & Abayas')}</span>
             </span>
           </div>
-          <div className="absolute bottom-6 sm:bottom-8 inset-x-0 px-6 text-white text-center">
-            <h3 className="text-2xl sm:text-3xl font-extrabold mb-2 font-arabic">{t('تشكيلة النساء', "Women's Collection")}</h3>
-            <p className="text-blue-100 text-xs sm:text-sm font-arabic mb-4 max-w-sm mx-auto">
-              {t('فساتين سهرة راقية، عبايات كلاسيكية، وأطقم خروج أنيقة', 'Evening dresses, classic abayas, and elegant outing sets')}
-            </p>
-            <span className="inline-flex items-center gap-2 bg-white/20 hover:bg-white text-white hover:text-royal backdrop-blur-md px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold font-arabic transition-all border border-white/40">
-              {t('اكتشفي التشكيلة', 'Explore Collection')}
-            </span>
+
+          {/* Bottom Luxury Frosted Glass Content */}
+          <div className="absolute bottom-5 sm:bottom-7 inset-x-4 sm:inset-x-6 text-white text-center z-10">
+            <div className="bg-slate-950/40 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-white/15 shadow-xl transition-all duration-300 group-hover:bg-slate-950/60 group-hover:border-white/30">
+              <h3 className="text-2xl sm:text-3xl font-extrabold mb-1.5 font-arabic tracking-tight">
+                {t('تشكيلة النساء', "Women's Collection")}
+              </h3>
+              <p className="text-blue-100/90 text-xs sm:text-sm font-arabic mb-4 max-w-sm mx-auto leading-relaxed">
+                {t('فساتين سهرة راقية، عبايات كلاسيكية، وأطقم خروج أنيقة', 'Evening dresses, classic abayas, and elegant outing sets')}
+              </p>
+              <span className="inline-flex items-center gap-2 bg-white/20 hover:bg-white text-white hover:text-royal backdrop-blur-md px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold font-arabic transition-all border border-white/40 shadow-sm group-hover:scale-105">
+                <span>{t('اكتشفي التشكيلة', 'Explore Collection')}</span>
+                {isRTL ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+              </span>
+            </div>
           </div>
         </Link>
 
         {/* Kids Card */}
         <Link
           to="/kids"
-          className="group relative h-80 sm:h-[420px] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900"
+          className="group relative h-[500px] sm:h-[580px] lg:h-[640px] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900 border border-gray-100 dark:border-slate-800"
         >
           <img
             src={kidsImg}
             alt="Kids Couture"
-            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700"
+            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
             loading="lazy"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=1000'
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0c1836]/90 via-[#0c1836]/30 to-transparent" />
-          <div className="absolute top-5 right-5">
-            <span className="bg-pink-400 text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-md font-arabic">
-              {t('أميرات الصغار', 'Little Princesses')}
+          {/* Subtle bottom shadow gradient: leaves top 60% of image completely clear and bright */}
+          <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none" />
+
+          {/* Top Badge */}
+          <div className="absolute top-5 right-5 z-10">
+            <span className="bg-pink-500 text-white text-xs font-extrabold px-3.5 py-1.5 rounded-full shadow-lg font-arabic flex items-center gap-1.5">
+              <Sparkles size={13} className="text-white" />
+              <span>{t('أميرات الصغار', 'Little Princesses')}</span>
             </span>
           </div>
-          <div className="absolute bottom-6 sm:bottom-8 inset-x-0 px-6 text-white text-center">
-            <h3 className="text-2xl sm:text-3xl font-extrabold mb-2 font-arabic">{t('تشكيلة الأطفال', "Kids' Collection")}</h3>
-            <p className="text-blue-100 text-xs sm:text-sm font-arabic mb-4 max-w-sm mx-auto">
-              {t('فساتين أميرات ساحرة وأطقم راقية للمناسبات والأعياد', 'Magical princess dresses and chic sets for occasions')}
-            </p>
-            <span className="inline-flex items-center gap-2 bg-white/20 hover:bg-white text-white hover:text-royal backdrop-blur-md px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold font-arabic transition-all border border-white/40">
-              {t('اكتشفي التشكيلة', 'Explore Collection')}
-            </span>
+
+          {/* Bottom Luxury Frosted Glass Content */}
+          <div className="absolute bottom-5 sm:bottom-7 inset-x-4 sm:inset-x-6 text-white text-center z-10">
+            <div className="bg-slate-950/40 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-white/15 shadow-xl transition-all duration-300 group-hover:bg-slate-950/60 group-hover:border-white/30">
+              <h3 className="text-2xl sm:text-3xl font-extrabold mb-1.5 font-arabic tracking-tight">
+                {t('تشكيلة الأطفال', "Kids' Collection")}
+              </h3>
+              <p className="text-blue-100/90 text-xs sm:text-sm font-arabic mb-4 max-w-sm mx-auto leading-relaxed">
+                {t('فساتين أميرات ساحرة وأطقم راقية للمناسبات والأعياد', 'Magical princess dresses and chic sets for occasions')}
+              </p>
+              <span className="inline-flex items-center gap-2 bg-white/20 hover:bg-white text-white hover:text-royal backdrop-blur-md px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold font-arabic transition-all border border-white/40 shadow-sm group-hover:scale-105">
+                <span>{t('اكتشفي التشكيلة', 'Explore Collection')}</span>
+                {isRTL ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+              </span>
+            </div>
           </div>
         </Link>
       </div>

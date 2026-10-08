@@ -13,17 +13,18 @@ interface ContentField {
   type: 'text' | 'textarea' | 'url'
   hasImage?: boolean
   rows?: number
+  hint?: string
 }
 
 const CONTENT_FIELDS: ContentField[] = [
   { key: 'promo_bar', labelAr: 'شريط العروض (أعلى الصفحة)', type: 'text' },
-  { key: 'hero_title', labelAr: 'عنوان البانر الرئيسي', type: 'text', hasImage: true },
+  { key: 'hero_title', labelAr: 'عنوان البانر الرئيسي (الهيرو)', type: 'text', hasImage: true, hint: 'المقاس الموصى به لبانر الهيرو: صورة أفقية عريضة (1920 × 1080 أو 1600 × 900 بكسل)' },
   { key: 'hero_subtitle', labelAr: 'وصف البانر الرئيسي', type: 'text' },
   { key: 'hero_button_text', labelAr: 'نص زر البانر', type: 'text' },
   { key: 'hero_button_link', labelAr: 'رابط زر البانر', type: 'url' },
-  { key: 'category_women_card', labelAr: 'صورة وبطاقة تشكيلة النساء (الصفحة الرئيسية)', type: 'text', hasImage: true },
-  { key: 'category_kids_card', labelAr: 'صورة وبطاقة تشكيلة الأطفال (الصفحة الرئيسية)', type: 'text', hasImage: true },
-  { key: 'about_content', labelAr: 'محتوى صفحة عن المتجر', type: 'textarea', hasImage: true, rows: 6 },
+  { key: 'category_women_card', labelAr: 'صورة وبطاقة تشكيلة النساء (الصفحة الرئيسية)', type: 'text', hasImage: true, hint: 'الأبعاد المثالية: صورة طولية عمودية (نسبة 3:4 أو 4:5 - مثل 800 × 1000 أو 1080 × 1350 بكسل) ليظهر الفستان والموديل بكامل طوله' },
+  { key: 'category_kids_card', labelAr: 'صورة وبطاقة تشكيلة الأطفال (الصفحة الرئيسية)', type: 'text', hasImage: true, hint: 'الأبعاد المثالية: صورة طولية عمودية (نسبة 3:4 أو 4:5 - مثل 800 × 1000 أو 1080 × 1350 بكسل) ليظهر فستان الطفلة كاملاً بدون قص' },
+  { key: 'about_content', labelAr: 'محتوى صفحة عن المتجر', type: 'textarea', hasImage: true, rows: 6, hint: 'صورة تعريفية عن الأتيليه وفريق العمل' },
   { key: 'shipping_policy', labelAr: 'سياسة الشحن والإرجاع', type: 'textarea', rows: 5 },
   { key: 'size_guide', labelAr: 'دليل المقاسات (ملاحظات إضافية)', type: 'textarea', rows: 5 },
   { key: 'footer_about', labelAr: 'نص الفوتر', type: 'text' },
@@ -129,7 +130,7 @@ export default function AdminContent() {
           <p className="text-sm text-gray-500 font-arabic">{hasChanges ? `${Object.keys(localEdits).length} حقل معدّل` : 'لا توجد تغييرات'}</p>
         </div>
 
-        {CONTENT_FIELDS.map(({ key, labelAr, type, hasImage, rows }) => (
+        {CONTENT_FIELDS.map(({ key, labelAr, type, hasImage, rows, hint }) => (
           <div key={key} className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-slate-800 transition-colors">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-950 dark:text-white font-arabic text-base">{labelAr}</h3>
@@ -183,7 +184,13 @@ export default function AdminContent() {
               {/* Image Upload */}
               {hasImage && (
                 <div>
-                  <label className="text-xs font-bold text-gray-800 dark:text-slate-200 mb-2 block font-arabic">صورة</label>
+                  <label className="text-xs font-bold text-gray-800 dark:text-slate-200 mb-1.5 block font-arabic">صورة</label>
+                  {hint && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400 font-arabic mb-2.5 bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200/80 dark:border-amber-800/50 flex items-center gap-1.5 leading-relaxed">
+                      <span className="text-sm">💡</span>
+                      <span>{hint}</span>
+                    </p>
+                  )}
                   {getField(key, 'img') && (
                     <div className="relative mb-2 group">
                       <img
